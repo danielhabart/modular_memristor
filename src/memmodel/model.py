@@ -1,6 +1,7 @@
 
+from __future__ import annotations
+from dataclasses import dataclass
 import numpy as np
-from matplotlib import pyplot as pt
 
 
 
@@ -22,11 +23,49 @@ from matplotlib import pyplot as pt
 # ---------------------------------------------------- 
 
 
-readV = 0.05
-Pw, Dt, Tr = 10*1e-3, 20*1e-3,50*1e-3
-datastep= Pw+2*Dt+Tr
-cyk = 200*2
-V0 = 0.4
+# readV = 0.05
+# Pw, Dt, Tr = 10*1e-3, 20*1e-3,50*1e-3
+# datastep= Pw+2*Dt+Tr
+# cyk = 200*2
+# V0 = 0.4
+
+@dataclass(frozen =True)
+class ModelParams:
+    # parameters for dH:
+    a: float = -0.58548204
+    ep: float = 1e-6
+    h11: float = 10.78560073e-5
+    h10: float = 224.48436321e-4
+    h01: float = 0.000101909990799
+    h00: float = 0.00252548081238
+
+    # volatility kernel parameters:
+    alpha: float = 0.02939634033310315
+    epsilon: float = 0.07
+
+    # voltage-controlled parameters:
+    mu: float = 0.21597481761947285
+
+    # synaptic-like plasticity parameters:
+    tp: float = 0.176843493508
+    tn: float = 0.619508386108
+    Ap: float = 10.962502436
+    An: float = 0.90766780177
+
+    #saturation parameters:
+    g0: float = 2.26e-03 
+
+
+
+
+@dataclass
+class ModelState:
+    s: float
+    x: float
+    y: float
+    w: float
+    ds: float
+    dw: float
 
 
 def pos(x):
@@ -34,54 +73,33 @@ def pos(x):
         return x
     else: return 0
 
-def stdp_step( x,y,w, v, tp,tn, ap,an): # sign interpretation: + is depression cycle, - is potentiation cycle
+class MemristorModel:
+    def __init__(self,params:ModelParams):
+        self.params = params
+    
+    def dH(self, state:ModelState) -> float:
+        p = self.params
+        dHs = (p.h11*np.power(abs(state.s)+p.ep, p.a) + p.h10)*state.ds/step
+        dHw = (p.h01*np.power(abs(state.w)+p.ep, p.a) + p.h00)*state.dw/step
+        return dHs+dHw
 
-    dx = step*(-x/tp) + step * pos(v) # positive part of voltage represents presynaptic activity
-    dy = step*(-y/tn) + step * pos(-v) # negative part of voltage represents postsynaptic activity
-    dw = step*( -an*y*pos(v) + ap*x*pos(-v) ) 
-
-    return dx,dy,dw
-
-#all units in basic form
-
-a = -0.58548204
-eps0 = 1e-6
-h11,h10= 10.78560073e-5, 224.48436321e-4
-mu, g0 = 0.21597481761947285, 2.26e-03 
-
-t1,t2,a1,a2,h01,h00 = 0.176843493508, 0.619508386108, 10.962502436, 0.90766780177, 0.000101909990799, 0.00252548081238
-
-def dH(s, w, h11,h10, h01,h00):
-    return h11*np.power(abs(s)+eps0, a) + h10,   h01*np.power(abs(w)+eps0,a) +h00 #*np.exp(h0*s)
-
-def evolution(v):
-    s = s0
-    x,y,w =  0,0, w0
-    dgw = np.zeros(int(Tmax/step))
-
-    for n,t in enumerate(range( int(Tmax/step))): #in s
-
-        ds = step*mu*v[n]
-        s += ds
-
-        dx,dy,dw = stdp_step( x,y,w, v[n], t1,t2,a1,a2)
-        x += dx
-        y += dy
-        w += dw
-
-        dgw[t] = sum( np.array(dH(s,w,h11,h10,h01,h00)) * np.array([ds/step,dw/step]) )#*G(s)
+    def evolution_step(self, state:ModelState, v): # sign interpretation: + is depression cycle, - is potentiation cycle
+        p = self.params
         
+        dx = step*(-state.x/p.tp) + step * pos(v) # positive part of voltage represents presynaptic activity
+        dy = step*(-state.y/p.tn) + step * pos(-v) # negative part of voltage represents postsynaptic activity
+        dw = step*( -p.An*state.y*pos(v) + p.Ap*state.x*pos(-v) ) 
+        ds = step*p.mu*v
 
-    return  dgw
+        return dx,dy,dw,ds
 
-w0 = 0#1*D/4
-s0 = 0
+
 
 
 def conv(hs,kernel):
     z = np.convolve(hs,kernel) #[int(Tmax/step):]
-    u = z[int((Pw+Dt)/step)::int(datastep/step)]
-    return u
+    # u = z[int((Pw+Dt)/step)::int(datastep/step)]
+    return z
 
 
 # start_vals = (1.3572192341069214e-05, 1.07103067988524e-06, 1.082, 0.41)
@@ -89,26 +107,27 @@ def conv(hs,kernel):
 #in msec
 step = 1*10**(-3)
 
-Tmax = datalen*datastep
+# Tmax = datalen*datastep
 
 
-time = int(2*Tmax/step)
+# time = int(2*Tmax/step)
 
 
-def cycle(t):
-    if t< Pw:
-        return V0
-    else: return 0
+# def cycle(t):
+#     if t< Pw:
+#         return V0
+#     else: return 0
 
-def inputV(t,cycles):
-    if (t*step)% (2*cycles * datastep) < cycles * datastep:
-        return cycle( (t*step)%datastep )
+# def inputV(t,cycles):
+#     if (t*step)% (2*cycles * datastep) < cycles * datastep:
+#         return cycle( (t*step)%datastep )
 
-    else:return -cycle( (t*step)%datastep )
+#     else:return -cycle( (t*step)%datastep )
 
 
 
-alph,eps = 0.02939634033310315 , 0.07
+
+
 def ker(x):
     if x>0:return 1/np.power(x+eps,alph+1)
     else: return 0
