@@ -3,64 +3,16 @@ import numpy as np
 from matplotlib import pyplot as pt
 import scipy.optimize as opt
 
-import os
-import re
-
-
 import csv
 
-
-# root = '/home/habart/bivoj_sync/Data_file_Syn_Plasticity_PCaPMA/FigS6-prubeh'
-root = '/Users/habibi/Documents/Neuroscience/bivoj_sync/Data_file_Syn_Plasticity_PCaPMA/FigS6-prubeh'
-dataf = '/Users/habibi/Documents/Neuroscience/bivoj_sync/Data_file_Syn_Plasticity_PCaPMA/dataf'
-# dataf = '/home/habart/bivoj_sync/new-model/dataf'
-
-names = []
-xdata = dict()
-ydata = dict()
-files = os.listdir(root)
-
-
-A0 = 1
-
-# D = 10*10**(-1)
-# tau1, tau2, tau3 = 0.12, 0.09, 4 # in seconds
-gam = 1
-
-readV = 0.05
-
-for txt in files:
-    if txt.endswith('.txt'):
-        f = open(f'{root}/{txt}')
-        nam, datx, daty = re.sub('.txt','',txt), [], []
-
-        x0,y0 = f.readline().split()
-        i = 1
-        for line in f:
-
-            try:
-                x, y = line.split()
-                datx +=[ float(x)-float(x0) ]
-                daty += [ float(y)/readV]
-            except ValueError: pass
-                
-            i=i+1
-
-        xdata[nam], ydata[nam] = datx,daty
-        names.append(nam) 
+data = 'tests/data_T=35s.csv'
+inputpulses= 'tests/inputpulses_T=35s.csv'
 
 datalen =580
 
-x = xdata[names[2]][:2*datalen]
-y = ydata[names[2]][:2*datalen]
+readV = 0.05
 
-V0 =    0.5#0.10*10**(-3)
-
-with open('T=35s.csv', 'w', newline= '' ) as f:
-    w = csv.writer(f)
-    w.writerow(['Va=-500mV, Ta=20ms, Tgap=20ms, Vr=-50mV, Tr=50ms, T= (20+20+50+20) ms'])
-    w.writerows(zip(x,y))
-
+V0=0.5
 
 def cycle(t):
     if t< 20:
@@ -71,8 +23,6 @@ def box(t):
     if t>4000 and t<5000:
         return V0
     else: return 0
-
-
 
 
 def dH(s,h1,h0):
@@ -154,6 +104,7 @@ vx = np.array([[inputV(t,float(name)) for t in range(time)] for name in names])
 tt = np.array([ t*step for t in range(time)])
 tx =  np.array([t*datastep for t in range(int(2*Tmax/datastep)) ])
 
+
 def single_err(i,mu,g0,h1,h0):
     gres = conv(sim(vx[i],mu,h1,h0),k)[:len(y[i])] + g0
     err = (gres-y[i])**2 /np.absolute(y[i])
@@ -199,27 +150,12 @@ slo = 4/(gmax-gmin)
 print(gmax, gmin)
 
 
-# 0.163259868452, 0.00108404332234, 0.67524490552, 3.07629134465e-05# time =94319.40959405899
-
-# 1002250.224135, 3.14199117269e-05, 6697.322794# time =258.16806864738464
-
-# end = tm.time()
-
-# str = str(mu) + ', ' + str(h1) + ', '+ str(h0) + ', ' + str(g0) + '# time =' + str(end-start)
-# with open(dataf,'w') as dat:
-#     dat.write(str)
-
-
-pd = []  
-
-
 fig, ax= pt.subplots(1,1,constrained_layout=True)
 dark_gray =  '#282A2B'#'#444444'
 for spine in ax.spines.values():
     spine.set_color(dark_gray)
 ax.tick_params(colors= dark_gray)
 
-ng.format_spines(ax)
 
 # ax.set_title(f'input pulses, read after 20ms, {name}', y=1.1, pad=-14)
 ax.set_xlabel('Time [s]')
