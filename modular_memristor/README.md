@@ -1,9 +1,15 @@
-# modular_memristor
 
-This package contains a memristor model that effectively integrates a voltage-controlled memristive core, volatile memory, synaptic-like plasticity and saturation effects into one computationally efficient and modular framework.
+We present a novel modular memristor model that effectively integrates a voltage-controlled memristive core, volatile memory, synaptic-like plasticity and saturation effects into one computationally efficient and modular framework.
 
-Data input 
-'''
+This repo contains two minimal working examples for simulating the response for pulse-train stimulation and spike timing-dependent plasticity-like effects. 
+
+
+
+################
+
+In the case of pulse-train stimulation, data input is considered in the form of pulses, that have a stimulation pulse of amplitude Va and read pulse of amplitude Vr. 
+
+```
 Amplitude
    ^         ↑    ┌──────┐
    |         │    │      │
@@ -19,7 +25,7 @@ Amplitude
 
                   <------------------------- T ---------------------->   
 
-'''
+```
 Va      =   stimulation pulse amplitude
 Ta      =   stimulation pulse duration
 
@@ -30,10 +36,5 @@ Tr      =   read pulse duration
 
 T       =   period of stimulation /read cycle.
 
-this is handled by the package io.py
-
-%%%%%%%%%%%%%%%%%%%%%%%
-
-memmodel.py 
 
 
